@@ -12,15 +12,10 @@ import bart
 
 
 while True:
-    text = 'BART Arrivals '
-    arrivals = bart.get_bart_times()
-
-
-    for destination, minutes in arrivals.iteritems():
-        text += bart.format_bart_information(destination, minutes)
-
-    print text
-    subprocess.call('printf "<ID01><PA>    <SB>{}    <SE>{}   \r\n" > /dev/ttyS0'.format(datetime.now().strftime('%H:%M'), text), shell=True)
+    bart_text = bart.bart_predictions()
+    display_text = "<ID01><PA>    <SB>{}  {}   \r\n".format(datetime.now().strftime('%H:%M'), bart_text)
+    print display_text
+    subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
 
     sleep(60)
 
