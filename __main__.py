@@ -13,7 +13,7 @@ import bart
 
 while True:
     bart_text = bart.bart_predictions()
-    display_text = "<ID01><PA>    <SB>{}  {}   \r\n".format(datetime.now().strftime('%H:%M'), bart_text)
+    display_text = "<ID01><PA>    <FT>  {}   \r\n".format(bart_text)
     print display_text
     subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
 
