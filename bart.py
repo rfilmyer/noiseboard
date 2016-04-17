@@ -1,23 +1,15 @@
-'''
-Thank you for taking your time to read the source code.
-This code is, unfortunately, full of workarounds and redundant.
-I might have to rewrite it later. In the meanwhile, at least it works!
-'''
-from collections import defaultdict
-from time import sleep
 import requests
-import subprocess
 import xmltodict
-from datetime import datetime
+from collections import defaultdict
 
 
-while True:
-    text = 'BART Arrivals '
+BART_URL = 'http://api.bart.gov/api/etd.aspx?cmd=etd&orig=16TH&key=MW9S-E7SL-26DU-VV8V'
+
+
+def get_bart_times():
+    # type: () -> dict
     arrivals = defaultdict(list)
-
-    BART_URL = 'http://api.bart.gov/api/etd.aspx?cmd=etd&orig=16TH&key=MW9S-E7SL-26DU-VV8V'
     response = xmltodict.parse(requests.get(BART_URL).text)
-
     for service in response['root']['station']['etd']:
         destination = service['abbreviation']
 
@@ -36,12 +28,9 @@ while True:
             arrivals[destination].append(int(minutes))
 
 
-    for destination, minutes in arrivals.iteritems():
-        text += '<SA><CM>{}<CB> {}<CP> | '.format(destination, ','.join(str(minute) for minute in sorted(arrivals[destination])))
+    return arrivals
 
-
-    print text
-    subprocess.call('printf "<ID01><PA>    <SB>{}    <SE>{}   \r\n" > /dev/ttyS0'.format(datetime.now().strftime('%H:%M'), text), shell=True)
-
-    sleep(60)
-
+def format_bart_information(destination, etas):
+    # type: (str, list(int)) -> str
+    prediction = '<SA><CM>{}<CB> {}<CP> | '.format(destination, ','.join(str(minute) for minute in sorted(etas)))
+    return prediction
