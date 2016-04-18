@@ -35,7 +35,7 @@ def format_bart_information(destination, etas):
     prediction = '<SA><CM>{}<CB> {} Min<CP>'.format(destination, ','.join(str(minute) for minute in sorted(etas)))
     return prediction
 
-def bart_predictions(orig='16TH'):
+def get_predictions(orig='16TH'):
     # type: (str) -> str
     api_params = REQUEST_PARAMS
     api_params['orig'] = orig
