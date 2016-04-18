@@ -30,19 +30,19 @@ def request_511_xml(stopcode='15553'):
 def format_route_times(route, bus_times):
     # type: (str, str) -> str
     route_info = "<SA><CM>{route} <CB>{times} Min"
-    minutes = ', '.join(bus_times)
+    minutes = ', '.join([ x for x in bus_times if int(x) <= 120 ])  # Get rid of abnormal predictions.
     return route_info.format(route=route, times=minutes)
-    
+
 
 def get_predictions():
-    muni_predictions = "<SE>MUNI "
-    direction_string = "<SB>{dir} - {routes}"
+    muni_predictions = "<SE>MUNI: "
+    direction_string = "<SB> {dir} - {routes}"
     for station_code, direction in STATION_CODES.iteritems():
         route_predictions = []
         predictions = request_511_xml(station_code)
         for route, times in predictions.iteritems():
             route_predictions.append(format_route_times(route, times))
-        muni_predictions += direction_string.format(dir=direction, 
-                                                    routes=' <CP> | '.join(route_predictions))
+        muni_predictions += direction_string.format(dir=direction,
+                                                    routes='<CP> | '.join(route_predictions))
 
     return muni_predictions

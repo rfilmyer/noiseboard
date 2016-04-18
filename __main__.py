@@ -18,10 +18,9 @@ while True:
     messages.append(bart.get_predictions())
     messages.append(muni.get_predictions())
 
-    text = ''.join(messages)
-    display_text = "<ID01><PA>    <FT>{}  {}   \r\n".format(datetime.now().strftime('%H:%M'), text)
+    text = '  '.join(messages)
+    display_text = "<ID01><PA>    <FT>{}  \r\n".format(text)
     print display_text
     subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
 
     sleep(60)
-

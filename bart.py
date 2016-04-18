@@ -40,7 +40,7 @@ def get_predictions(orig='16TH'):
     api_params = REQUEST_PARAMS
     api_params['orig'] = orig
 
-    bart_text = '<SE>BART Arrivals: '
+    bart_text = '<SE>BART: '
     arrivals = get_bart_times(api_params)
     line_predictions = []
 
