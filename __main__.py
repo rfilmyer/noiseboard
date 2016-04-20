@@ -11,16 +11,16 @@ from datetime import datetime
 import bart
 import muni
 
+try:
+    while True:
+        messages = []
 
-while True:
-    messages = []
-
-    messages.append(bart.get_predictions())
-    messages.append(muni.get_predictions())
-
-    text = '  '.join(messages)
-    display_text = "<ID01><PA>  {}  \r\n".format(text)
-    print display_text
-    subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
-
-    sleep(60)
+        messages.append(bart.get_predictions())
+        messages.append(muni.get_predictions())
+        text = '  '.join(messages)
+        display_text = "<ID01><PA>  {}  \r\n".format(text)
+        print display_text
+        subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
+        sleep(60)
+finally:
+    subprocess.call('printf "<ID01><PA><SE>  Noiseboard is dead - check console :(  \r\n" > /dev/ttyS0'.format(text=display_text), shell=True)
