@@ -23,4 +23,5 @@ try:
         subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
         sleep(60)
 finally:
-    subprocess.call('printf "<ID01><PA><SE>  Noiseboard is dead - check console :(  \r\n" > /dev/ttyS0'.format(text=display_text), shell=True)
+    display_text = 'printf "<ID01><PA><SE>  Noiseboard is dead - check console :(  \r\n" > /dev/ttyS0'
+    subprocess.call(display_text, shell=True)
