@@ -19,7 +19,7 @@ while True:
     messages.append(muni.get_predictions())
 
     text = '  '.join(messages)
-    display_text = "<ID01><PA>    <FT>{}  \r\n".format(text)
+    display_text = "<ID01><PA>  {}  \r\n".format(text)
     print display_text
     subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
 

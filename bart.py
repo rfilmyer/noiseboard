@@ -18,21 +18,23 @@ def get_bart_times(params=REQUEST_PARAMS):
             for arrival in service['estimate']:
                 minutes = arrival['minutes']
                 if minutes == 'Leaving': minutes = 0
-                if int(minutes) > 30 or destination == '24TH': continue
+                if destination == 'NCON': destination = 'PITT' # Thanks, electrical surges!
+                if destination == '24TH' or len(arrivals[destination]) >= 2 or int(minutes) > 30: continue
                 arrivals[destination].append(int(minutes))
 
         except TypeError:
             # For trains that only have one arrival left.
             minutes = service['estimate']['minutes']
             if minutes == 'Leaving': minutes = 0
-            if int(minutes) > 30 or destination == '24TH': continue
+            if destination == 'NCON': destination = 'PITT' # Thanks, electrical surges!
+            if destination == '24TH' or len(arrivals[destination]) >= 2 or int(minutes) > 30: continue
             arrivals[destination].append(int(minutes))
 
     return arrivals
 
 def format_bart_information(destination, etas):
     # type: (str, list(int)) -> str
-    prediction = '<SA><CM>{}<CB> {} Min<CP>'.format(destination, ','.join(str(minute) for minute in sorted(etas)))
+    prediction = '<SA><CM>{}<CB> {}<CP>'.format(destination, ','.join(str(minute) for minute in sorted(etas)))
     return prediction
 
 def get_predictions(orig='16TH'):
