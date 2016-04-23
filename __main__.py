@@ -17,8 +17,8 @@ try:
 
         messages.append(bart.get_predictions())
         messages.append(muni.get_predictions())
-        text = '  '.join(messages)
-        display_text = "<ID01><PA>  {}  \r\n".format(text)
+        text = '<FI>'.join(messages)
+        display_text = "<ID01><PA>  <FD>{}  \r\n".format(text)
         print display_text
         subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
         sleep(60)

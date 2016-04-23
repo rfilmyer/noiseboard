@@ -34,7 +34,7 @@ def get_bart_times(params=REQUEST_PARAMS):
 
 def format_bart_information(destination, etas):
     # type: (str, list(int)) -> str
-    prediction = '<SA><CM>{}<CB> {}<CP>'.format(destination, ','.join(str(minute) for minute in sorted(etas)))
+    prediction = '<SA><CM>{}<CB> {}'.format(destination, ','.join(str(minute) for minute in sorted(etas)))
     return prediction
 
 def get_predictions(orig='16TH'):
@@ -42,13 +42,13 @@ def get_predictions(orig='16TH'):
     api_params = REQUEST_PARAMS
     api_params['orig'] = orig
 
-    bart_text = '<SE>BART: '
+    bart_text = '<CP>BART Arrivals<FI>'
     arrivals = get_bart_times(api_params)
     line_predictions = []
 
     for destination, minutes in arrivals.iteritems():
         line_predictions.append(format_bart_information(destination, minutes))
 
-    bart_text += ' | '.join(line_predictions)
+    bart_text += '<FI>'.join(line_predictions)
 
     return bart_text
