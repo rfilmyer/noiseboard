@@ -4,7 +4,7 @@ import requests
 
 REQUEST_PARAMS = {'stopcode': '15553', 'token': 'ebda4c89-0c5f-40d8-9ed8-e9deff999a49'}
 API_URL = 'http://services.my511.org/Transit2.0/GetNextDeparturesByStopCode.aspx'
-STATION_CODES = {'15553': 'Northb/d', '15554': 'Southb/d'}
+STATION_CODES = {'15553': 'NB', '15554': 'SB', '13338': 'WB'}
 
 class TransitServiceError(Exception):
     pass
@@ -28,22 +28,21 @@ def request_511_xml(stopcode='15553'):
         predictions[bus.attrib.get('Code')] = arrival_times
     return predictions
 
-def format_route_times(route, bus_times):
+def format_route_times(route, bus_times, direction = ''):
     # type: (str, str) -> str
-    route_info = "<CM>{route} <CB>{times}"
-    minutes = ','.join([ x for x in bus_times if int(x) <= 120 ])  # Get rid of abnormal predictions.
-    return route_info.format(route=route, times=minutes)
+    route_info = "<CM>{route} <CF>{dir} <CB>{times}"
+    minutes = ','.join([x for x in bus_times if int(x) <= 120])  # Get rid of abnormal predictions.
+    return route_info.format(route=route, times=minutes, dir=direction)
 
 
 def get_predictions():
     muni_predictions = "<CP>MUNI Arrivals<FI>"
-    direction_string = "<CF>{dir}<FI><SA>{routes}<FI>"
+    direction_string = "<SA>{routes}<FI>"
     for station_code, direction in STATION_CODES.iteritems():
         route_predictions = []
         predictions = request_511_xml(station_code)
         for route, times in predictions.iteritems():
-            route_predictions.append(format_route_times(route, times))
-        muni_predictions += direction_string.format(dir=direction,
-                                                    routes='<FI>'.join(route_predictions))
+            route_predictions.append(format_route_times(route, times, direction))
+        muni_predictions += direction_string.format(routes='<FI>'.join(route_predictions))
 
     return muni_predictions
