@@ -19,7 +19,7 @@ try:
         messages.append(muni.get_predictions())
         text = '<FI>'.join(messages)
         display_text = "<ID01><PA>  <FD>{}{}  \r\n".format(text, datetime.now().strftime('%H:%M'))
-        print display_text
+        print(display_text)
         subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
         sleep(60)
 finally:

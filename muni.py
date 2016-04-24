@@ -38,10 +38,10 @@ def format_route_times(route, bus_times, direction = ''):
 def get_predictions():
     muni_predictions = "<CP>MUNI Arrivals<FI>"
     direction_string = "<SA>{routes}<FI>"
-    for station_code, direction in STATION_CODES.iteritems():
+    for station_code, direction in STATION_CODES.items():
         route_predictions = []
         predictions = request_511_xml(station_code)
-        for route, times in predictions.iteritems():
+        for route, times in predictions.items():
             route_predictions.append(format_route_times(route, times, direction))
         muni_predictions += direction_string.format(routes='<FI>'.join(route_predictions))
 

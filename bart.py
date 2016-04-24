@@ -46,7 +46,7 @@ def get_predictions(orig='16TH'):
     arrivals = get_bart_times(api_params)
     line_predictions = []
 
-    for destination, minutes in arrivals.iteritems():
+    for destination, minutes in arrivals.items():
         line_predictions.append(format_bart_information(destination, minutes))
 
     bart_text += '<FI>'.join(line_predictions)
