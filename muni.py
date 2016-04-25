@@ -1,10 +1,11 @@
 from xml.etree import ElementTree
+from collections import OrderedDict
 
 import requests
 
 REQUEST_PARAMS = {'stopcode': '15553', 'token': 'ebda4c89-0c5f-40d8-9ed8-e9deff999a49'}
 API_URL = 'http://services.my511.org/Transit2.0/GetNextDeparturesByStopCode.aspx'
-STATION_CODES = {'15553': 'NB', '15554': 'SB', '13338': 'WB'}
+STATION_CODES = OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB')])
 
 class TransitServiceError(Exception):
     pass
@@ -19,7 +20,7 @@ def request_511_xml(stopcode='15553'):
     if root.tag == 'transitServiceError':
         raise TransitServiceError(root.text)
     bus_lines = root.findall(".//Route") # If only they used jQuery-style selectors
-    predictions = {}
+    predictions = OrderedDict()
     for bus in bus_lines:
         arrival_times = []
         for time in bus.findall(".//DepartureTime"):
