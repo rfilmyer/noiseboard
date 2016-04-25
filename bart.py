@@ -12,29 +12,27 @@ def get_bart_times(params=REQUEST_PARAMS):
     arrivals = defaultdict(list)
     response = xmltodict.parse(requests.get(BART_URL, params=REQUEST_PARAMS).text)
     for service in response['root']['station']['etd']:
+        last_train = False
         destination = service['abbreviation']
 
-        try:
-            for arrival in service['estimate']:
+        for arrival in service['estimate']:
+            try:
                 minutes = arrival['minutes']
-                if destination == '24TH' or len(arrivals[destination]) >= 2: continue
-                if minutes == 'Leaving':
-                    minutes = 'Due'  # Shorten to prevent scrolling.
-                elif int(minutes) > 30:
-                    continue
-                if destination == 'NCON': destination = 'PITT' # Thanks, electrical surges!
-                arrivals[destination].append(minutes)
+            except TypeError:
+                last_train = True
+                minutes = service['estimate']['minutes'][0:2]
 
-        except TypeError:
-            # For trains that only have one arrival left.
-            minutes = arrival['minutes']
             if destination == '24TH' or len(arrivals[destination]) >= 2: continue
+            
             if minutes == 'Leaving':
                 minutes = 'Due'  # Shorten to prevent scrolling.
-            elif int(minutes) > 30:
+            elif last_train:
+                arrivals[destination].append(minutes + ' (Last)')
+                break
+            elif int(minutes) <= 30:
+                arrivals[destination].append(minutes)
+            else:
                 continue
-            if destination == 'NCON': destination = 'PITT' # Thanks, electrical surges!
-            arrivals[destination].append(minutes)
 
     return arrivals
 
