@@ -23,11 +23,11 @@ def get_bart_times(params=REQUEST_PARAMS):
                 minutes = service['estimate']['minutes'][0:2]
 
             if destination == '24TH' or len(arrivals[destination]) >= 2: continue
-            
+
             if minutes == 'Leaving':
                 minutes = 'Due'  # Shorten to prevent scrolling.
             elif last_train:
-                arrivals[destination].append(minutes + ' (Last)')
+                arrivals[destination].append(minutes + ' Last')
                 break
             elif int(minutes) <= 30:
                 arrivals[destination].append(minutes)
