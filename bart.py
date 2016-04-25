@@ -29,7 +29,7 @@ def get_bart_times(params=REQUEST_PARAMS):
             elif last_train:
                 arrivals[destination].append(minutes + ' Last')
                 break
-            elif int(minutes) <= 30:
+            elif int(minutes) <= 60:
                 arrivals[destination].append(minutes)
             else:
                 continue
