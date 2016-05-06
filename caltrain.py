@@ -6,7 +6,7 @@ STATION_CODES = OrderedDict([('70021', 'NB'), ('70022', 'SB')])
 
 
 def get_predictions():
-    muni_predictions = "<CP>Caltrain Arrivals<FI>"
+    muni_predictions = "<CP>Caltrain<FI>"
     direction_string = "<SA>{routes}<FI>"
     for station_code, direction in STATION_CODES.items():
         route_predictions = []
