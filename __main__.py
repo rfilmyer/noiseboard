@@ -20,7 +20,7 @@ try:
         messages.append(muni.get_predictions())
         messages.append(caltrain.get_predictions())
         text = '<FI>'.join(messages)
-        display_text = "<ID01><PA>  <FD>{}{}  \r\n".format(text, datetime.now().strftime('%H:%M'))
+        display_text = "<ID01><PA>  <FD>{}{}  <FI>\r\n".format(text, datetime.now().strftime('%H:%M'))
         print(display_text)
         subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
         sleep(60)
