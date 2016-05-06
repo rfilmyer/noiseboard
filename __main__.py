@@ -10,6 +10,7 @@ import subprocess
 from datetime import datetime
 import bart
 import muni
+import caltrain
 
 try:
     while True:
@@ -17,6 +18,7 @@ try:
 
         messages.append(bart.get_predictions())
         messages.append(muni.get_predictions())
+        messages.append(caltrain.get_predictions())
         text = '<FI>'.join(messages)
         display_text = "<ID01><PA>  <FD>{}{}  \r\n".format(text, datetime.now().strftime('%H:%M'))
         print(display_text)
