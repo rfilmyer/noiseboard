@@ -2,11 +2,11 @@ from collections import OrderedDict
 
 import api_511
 
-STATION_CODES = OrderedDict([('70021', 'NB'), ('70022', 'SB')])
+STATION_CODES = OrderedDict([('70022', 'SB')])
 
 
 def get_predictions():
-    muni_predictions = "<CP>Caltrain<FI>"
+    muni_predictions = "<CP>Caltrain (22nd)<FI>"
     direction_string = "<SA>{routes}<FI>"
     for station_code, direction in STATION_CODES.items():
         route_predictions = []
