@@ -6,8 +6,8 @@ STATION_CODES = OrderedDict([('70022', 'SB')])
 
 
 def get_predictions():
-    muni_predictions = "<CP>Caltrain (22nd)<FI>"
-    direction_string = "<SA>{routes}<FI>"
+    muni_predictions = "<CP>Caltrain@22nd<FI>"
+    direction_string = "<SA>{routes}"
     for station_code, direction in STATION_CODES.items():
         route_predictions = []
         predictions = api_511.request_511_xml(station_code)
