@@ -32,3 +32,25 @@ def format_route_times(route, bus_times, direction = ''):
     route_info = "<CM>{route} <CF>{dir} <CB>{times}"
     minutes = ','.join([x for x in bus_times if int(x) <= 120])  # Get rid of abnormal predictions.
     return route_info.format(route=route, times=minutes, dir=direction)
+
+def format_service_prediction(headline, station_codes):
+    # type: (str, dict) -> str
+    opening = "<CP>{headline}<FI>".format(headline=headline)
+    direction = "<SA>{routes}"
+    service_predictions = []
+    for station_code, direction in station_codes.items():
+        route_predictions = []
+        predictions = request_511_xml(station_code)
+        for route, times in predictions.items():
+            if times:
+                route_predictions.append(format_route_times(route, times, direction))
+        service_predictions.append(direction.format(routes='<FI>'.join(route_predictions)))
+
+    return opening + "<FI>".join(service_predictions)
+
+def predict():
+    # type: () -> list(str)
+    muni = {"name": "MUNI Arrivals", "stops": OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB')])}
+    caltrain = {"name": "Caltrain@22nd", "stops": OrderedDict([('70022', 'SB')])}
+    services = [muni, caltrain]
+    return [format_service_prediction(line['name'], line['stops']) for line in services]

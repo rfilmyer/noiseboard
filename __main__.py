@@ -9,16 +9,15 @@ from time import sleep
 import subprocess
 from datetime import datetime
 import bart
-import muni
-import caltrain
+import api_511
 
 try:
     while True:
         messages = []
 
         messages.append(bart.get_predictions())
-        messages.append(muni.get_predictions())
-        messages.append(caltrain.get_predictions())
+        for line in api_511.predict():
+            messages.append(line)
         text = '<FI>'.join(messages)
         display_text = "<ID01><PA>  <FD>{}<FI>{}\r\n".format(text, datetime.now().strftime('%H:%M'))
         print(display_text)
