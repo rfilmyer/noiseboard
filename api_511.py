@@ -1,3 +1,6 @@
+"""
+The all-in-one module to make calls to the 511.org XML API.
+"""
 from xml.etree import ElementTree
 from collections import OrderedDict
 
@@ -7,10 +10,23 @@ REQUEST_PARAMS = {'stopcode': '15553', 'token': 'ebda4c89-0c5f-40d8-9ed8-e9deff9
 API_URL = 'http://services.my511.org/Transit2.0/GetNextDeparturesByStopCode.aspx'
 
 class TransitServiceError(Exception):
+    """
+    An error from the request to the 511.org API.
+    """
     pass
 
 def request_511_xml(stopcode='15553'):
     # type: (str) -> dict(str: list(str))
+    """
+    Sends a request to the 511.org XML API with a station code and 
+    returns a dict of lines that serve it and the next predicted arrival times.
+
+    Returns:
+        OrderedDict: Lines and ETAs for routes at the station in the format
+            OrderedDict([('J', ['2', '11']), ('KT', ['5', '16']), ('L', ['4', '6']),
+             ('M', ['1', '9']), ('N', ['4', '10'])])
+
+    """
     api_request = REQUEST_PARAMS
     api_request['stopcode'] = stopcode
     xml_string = requests.get(API_URL, params=REQUEST_PARAMS).text
@@ -32,3 +48,29 @@ def format_route_times(route, bus_times, direction = ''):
     route_info = "<CM>{route} <CF>{dir} <CB>{times}"
     minutes = ','.join([x for x in bus_times if int(x) <= 120])  # Get rid of abnormal predictions.
     return route_info.format(route=route, times=minutes, dir=direction)
+
+def format_service_prediction(headline, station_codes):
+    # type: (str, dict) -> str
+    opening = "<CP>{headline}<FI>".format(headline=headline)
+    direction_color = "<SA>{routes}"
+    service_predictions = []
+    for station_code, direction in station_codes.items():
+        route_predictions = []
+        predictions = request_511_xml(station_code)
+        for route, times in predictions.items():
+            if times:
+                #print('route:', route, 'times:', times, 'direction:', direction)
+                route_predictions.append(format_route_times(route, times, direction))
+        formatted_route_predictions = '<FI>'.join(route_predictions)
+        service_predictions.append(
+            direction_color.format(routes=formatted_route_predictions))
+
+    return opening + "<FI>".join(service_predictions)
+
+def predict():
+    # type: () -> list(str)
+    muni = {"name": "MUNI Arrivals", 
+            "stops": OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB')])}
+    caltrain = {"name": "Caltrain@22nd", "stops": OrderedDict([('70022', 'SB')])}
+    services = [muni, caltrain]
+    return [format_service_prediction(line['name'], line['stops']) for line in services]
