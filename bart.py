@@ -5,7 +5,7 @@ API_KEY = 'MW9S-E7SL-26DU-VV8V'
 BART_URL = 'http://api.bart.gov/api/etd.aspx'
 
 
-def get_bart_times(params=REQUEST_PARAMS):
+def get_bart_times(params):
     """
     Makes a request to BART's XML API
 
@@ -40,25 +40,33 @@ def format_bart_information(destination, etas):
         etas (list): A list of arrival times for a train line (can be `str`s or `int`s)
 
     Returns:
-        string: The formatted string, ready to be put into the board.
+        dict: Contains 2 parts: the text to print ("text"), and the text to send to the board ("fmt")
     """
-    prediction = '<SA><CM>{}<CB> {}'.format(destination, ','.join(etas))
-    return prediction
+    prediction_fmt = '<SA><CM>{}<CB> {}'.format(destination, ','.join(etas))
+    prediction_text = "{0}: {1}".format(destination, ','.join(etas))
+
+    return {"fmt": prediction_fmt, "text": prediction_text}
+
 
 def get_predictions(orig='16TH'):
-    # type: (str) -> str
     """
     Given a BART stop, returns predictions formatted for the LED board.
+
+    Returns:
+        dict: Contains 2 parts: the text to print ("text"), and the text to send to the board ("fmt")
     """
     api_params = {"cmd": "etd", "orig": orig, "key": API_KEY}
 
-    bart_text = '<CP>BART Arrivals<FI>'
+    bart_fmt = '<CP>BART Arrivals<FI>'
+    bart_text = ''
+
     arrivals = get_bart_times(api_params)
     line_predictions = []
 
     for line in arrivals:
         line_predictions.append(format_bart_information(line['line'], line['times']))
 
-    bart_text += '<FI>'.join(line_predictions)
+    bart_fmt += '<FI>'.join([line["fmt"] for line in line_predictions])
+    bart_text += '\n'.join([line["text"] for line in line_predictions])
 
-    return bart_text
+    return {"fmt": bart_fmt, "text": bart_text}

@@ -16,11 +16,21 @@ try:
         messages = []
 
         messages.append(bart.get_predictions())
-        for line in api_511.predict():
-            messages.append(line)
-        text = '<FI>'.join(messages)
-        display_text = "<ID01><PA>  <FD>{}<FI>{}\r\n".format(text, datetime.now().strftime('%H:%M'))
-        print(display_text)
+        for bus_line in api_511.predict():
+            messages.append(bus_line)
+
+        date_string = datetime.now().strftime('%m/%e %R')
+        messages.append({'fmt': date_string, 'text': date_string})
+
+        board_messages = [line['fmt'] for line in messages]
+        terminal_messages = [line['text'] for line in messages]
+
+        single_string_fmt = '<FI>'.join(board_messages)
+        single_string_text = '\n'.join(terminal_messages)
+
+        print(single_string_text)
+
+        display_text = "<ID01><PA>  <FD>{}\r\n".format(single_string_fmt)
         subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
         sleep(60)
 finally:

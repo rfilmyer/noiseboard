@@ -59,15 +59,20 @@ def format_route_times(route, bus_times, direction=''):
         direction (str, optional): A optional direction to be sent along with the bus parameters
 
     Returns:
-        str: The final, formatted string with routes and times
+        Dict: The final string with routes and times.
+            "fmt" contains the board-ready version, "text" contains a human-readable version.
 
     Examples:
         >>> format_route_times('14', [3, 11, 17], 'NB')
-        "<CM>14 <CF>NB <CB>3, 11, 17"
+        {'fmt': '<CM>14 <CF>NB <CB>3,11,17', 'text': '14 (NB): 3,11,17'}
     """
-    route_info = "<CM>{route} <CF>{dir} <CB>{times}"
-    minutes = ','.join([x for x in bus_times if int(x) <= 120])  # Get rid of abnormal predictions.
-    return route_info.format(route=route, times=minutes, dir=direction)
+    route_info_fmt = "<CM>{route} <CF>{dir} <CB>{times}"
+    route_info_text = "{route} ({dir}): {times}"
+
+    minutes = ','.join([str(x) for x in bus_times if int(x) <= 120])  # Get rid of abnormal predictions.
+
+    return {"fmt":  route_info_fmt.format( route=route, times=minutes, dir=direction),
+            "text": route_info_text.format(route=route, times=minutes, dir=direction)}
 
 
 def format_service_prediction(headline, station_codes):
@@ -81,15 +86,22 @@ def format_service_prediction(headline, station_codes):
         station_codes(dict): A dictionary where keys map to stop codes, and
 
     Returns:
-        string: A formatted string for
+        dict: Strings corresponding to bus stop predictions.
+            Board-formatted string is in "fmt", Human-readable in "text"
 
     Examples:
-        >>>format_service_prediction("MUNI Arrivals", {'15553': 'NB', '13338': 'WB'})
-        "<CP>MUNI Arrivals<FI><CM>14 <CF>NB <CB>3, 11, 17<CM>33 <CF>WB <CB>22, 40"
+        >>> format_service_prediction("MUNI Arrivals", {'15553': 'NB', '13338': 'WB'})
+            {'text': 'MUNI Arrivals:\n14 (NB): 2,16\n33 (NB): 12,27\n49 (NB): 12,23',
+                'fmt': '<CP>MUNI Arrivals<FI><SA><CM>33 <CF>WB <CB>3,18<FI><SA><CM>14 <CF>NB <CB>2,16<FI><CM>33'\
+                       '<CF>NB <CB>12,27<FI><CM>49 <CF>NB <CB>12,23'}
+
     """
-    opening = "<CP>{headline}<FI>".format(headline=headline)
+    opening_fmt = "<CP>{headline}<FI>".format(headline=headline)
+    opening_text = "{headline}:\n".format(headline=headline)
+
     direction_color = "<SA>{routes}"
     service_predictions = []
+
     for station_code, direction in station_codes.items():
         route_predictions = []
         predictions = request_511_xml(station_code)
@@ -97,11 +109,15 @@ def format_service_prediction(headline, station_codes):
             if times:
                 # print('route:', route, 'times:', times, 'direction:', direction)
                 route_predictions.append(format_route_times(route, times, direction))
-        formatted_route_predictions = '<FI>'.join(route_predictions)
-        service_predictions.append(
-            direction_color.format(routes=formatted_route_predictions))
 
-    return opening + "<FI>".join(service_predictions)
+        route_predictions_fmt = '<FI>'.join([route['fmt'] for route in route_predictions])
+        route_predictions_text = '\n'.join([route['text'] for route in route_predictions])
+
+        service_predictions.append(
+            direction_color.format(routes=route_predictions_fmt))
+
+    return {"fmt": opening_fmt + "<FI>".join(service_predictions),
+            "text": opening_text + route_predictions_text}
 
 
 def predict():
@@ -110,7 +126,11 @@ def predict():
         This function exists for convenience, and is just sugar over the format_service_prediction function.
 
     Returns:
-        list: String(s) containing formatted route information for given providers and service times.
+        list: Dicts containing formatted and human-readable route information for given providers and service times.
+
+    Examples:
+        >>> predict()
+        ['fmt': 'abcde', 'text': 'defgh']
     """
     muni = {"name": "MUNI Arrivals",
             "stops": OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB')])}
