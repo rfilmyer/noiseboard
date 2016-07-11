@@ -15,7 +15,7 @@ try:
     while True:
         messages = []
 
-        messages.append(bart.get_predictions())
+        # messages.append(bart.get_predictions())
         for bus_line in api_511.predict():
             messages.append(bus_line)
 

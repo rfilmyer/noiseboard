@@ -131,7 +131,7 @@ def format_route_times(route, bus_times, direction='', mapping=None):
             "text": route_info_text.format(route=route, times=minutes, dir=direction)}
 
 
-def format_service_prediction(headline, agency, station_codes, mapping=None):
+def format_service_prediction(headline, agency, station_codes, mapping=None, legacy=False):
     """
     Returns a formatted string combining prediction times for different stops and lines
         under a single banner for a provider.
@@ -161,7 +161,11 @@ def format_service_prediction(headline, agency, station_codes, mapping=None):
 
     for station_code, direction in station_codes.items():
         route_predictions = []
-        predictions = request_511_json(agency, station_code, mapping)
+        if legacy:
+            predictions = request_511_xml(station_code)
+        else:
+            predictions = request_511_json(agency, station_code, mapping)
+
         for route, times in predictions.items():
             if times:
                 route_predictions.append(format_route_times(route, times, direction, mapping))
@@ -203,4 +207,8 @@ def predict():
         stops = line['stops']
         mapping = line['mapping'] if line.get('mapping') else {}
         predictions.append(format_service_prediction(name, agency, stops, mapping))
+
+    # Caltrain Hack
+    predictions.append(format_service_prediction(caltrain['name'], caltrain['stops'], legacy=True))
+
     return predictions
