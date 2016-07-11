@@ -8,14 +8,12 @@ I might have to rewrite it later. In the meanwhile, at least it works!
 from time import sleep
 import subprocess
 from datetime import datetime
-import bart
 import api_511
 
 try:
     while True:
         messages = []
 
-        # messages.append(bart.get_predictions())
         for bus_line in api_511.predict():
             messages.append(bus_line)
 

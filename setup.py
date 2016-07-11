@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='noiseboard',
-    version='1.0',
+    version='2.0',
     url='https://github.com/rfilmyer/noiseboard',
     license='MIT',
     author='Roger Filmyer',

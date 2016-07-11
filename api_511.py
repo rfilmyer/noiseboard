@@ -65,7 +65,7 @@ def request_511_json(agency='sf-muni', stopcode='15553', mapping=None):
         arrival_mins = int(arrival_delta.total_seconds()/60)
         if not predictions.get(route_number):
             predictions[route_number] = [arrival_mins]
-        else:
+        elif len(predictions.get(route_number)) < 3:
             predictions[route_number].append(arrival_mins)
 
     return predictions
@@ -196,8 +196,9 @@ def predict():
             "stops": OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB')])}
     caltrain = {"name": "Caltrain@22nd", "agency": "caltrain", "stops": OrderedDict([('70022', 'SB')])}
     bart = {"name": "BART", "agency": "bart", "stops": OrderedDict([('10', ''),('99', '')]),
-            "mapping": {"1561": "SFO/M", "385": "Daly", "389": "Daly", "720": "SFO", "1230":
-                        "Pitt", "237": "Rich", "736": "Frmt", "920": "Dubl"}}
+            "mapping": {"1561": "SFO/M", "385": "Daly", "389": "Daly", "720": "SFO",
+                        "1230": "Pitt", "237": "Rich", "736": "Frmt", "920": "Dubl",
+                        "764": "Mbrae", "243": "Daly", "722": "SFO", "917": "Frmt", "1351": "Rich"}}
     services = [bart, muni]
 
     predictions = []
@@ -209,6 +210,6 @@ def predict():
         predictions.append(format_service_prediction(name, agency, stops, mapping))
 
     # Caltrain Hack
-    predictions.append(format_service_prediction(caltrain['name'], caltrain['stops'], legacy=True))
+    predictions.append(format_service_prediction(caltrain['name'], caltrain['agency'], caltrain['stops'], legacy=True))
 
     return predictions
