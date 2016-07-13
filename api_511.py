@@ -11,7 +11,7 @@ import requests
 XML_TOKEN = 'ebda4c89-0c5f-40d8-9ed8-e9deff999a49'
 XML_URL = 'http://services.my511.org/Transit2.0/GetNextDeparturesByStopCode.aspx'\
 
-NEXTGEN_TOKEN = '61c0dc9d-b356-4a4f-9190-3cc687c24397'
+DEFAULT_NEXTGEN_TOKEN = '61c0dc9d-b356-4a4f-9190-3cc687c24397'
 NEXTGEN_URL = 'http://api.511.org/transit/StopMonitoring'
 
 
@@ -22,12 +22,13 @@ class TransitServiceError(Exception):
     pass
 
 
-def request_511_json(agency='sf-muni', stopcode='15553', mapping=None):
+def request_511_json(api_key, agency='sf-muni', stopcode='15553', mapping=None):
     """
     Sends a request to the 511.org JSON/GTFS API with an agency name and station code and
     returns lines that serve the stop and their next predicted arrival times.
 
     Args:
+        api_key: The API key used to pull from the 511 API.
         agency: Stop information from this agency (including 'sf-muni' and others)
         stopcode: The code uniquely identifying a MUNI stop, usually visible on a nearby sign post.
     Returns:
@@ -38,14 +39,16 @@ def request_511_json(agency='sf-muni', stopcode='15553', mapping=None):
         OrderedDict([('J', ['2', '11']), ('KT', ['5', '16']), ('L', ['4', '6']),
              ('M', ['1', '9']), ('N', ['4', '10'])])
     """
-    api_request = {'format': 'json', 'api_key': NEXTGEN_TOKEN,
+    api_request = {'format': 'json', 'api_key': api_key,
                    'agency': agency, 'stopCode': stopcode}
 
     response = requests.get(NEXTGEN_URL, params=api_request)
     response.encoding = "utf-8-sig"
     if response.status_code != 200:
         if response.status_code == 429:
-            raise TransitServiceError("Rate Limited/HTTP Error 429" + "\n" + response.text)
+            raise TransitServiceError("Rate Limited/HTTP Error 429:" + "\n" + response.text)
+        elif response.status_code == 401:
+            raise TransitServiceError("Unauthorized/HTTP Error 401:" + "\n" + response.text)
         else:
             raise TransitServiceError("HTTP Error {code}".format(code=response.status_code))
     base_dict = response.json()
@@ -132,7 +135,7 @@ def format_route_times(route, bus_times, direction='', mapping=None):
             "text": route_info_text.format(route=route, times=minutes, dir=direction_text)}
 
 
-def format_service_prediction(headline, agency, station_codes, mapping=None, legacy=False):
+def format_service_prediction(headline, agency, station_codes, api_key, mapping=None, legacy=False):
     """
     Returns a formatted string combining prediction times for different stops and lines
         under a single banner for a provider.
@@ -165,7 +168,7 @@ def format_service_prediction(headline, agency, station_codes, mapping=None, leg
         if legacy:
             predictions = request_511_xml(station_code)
         else:
-            predictions = request_511_json(agency, station_code, mapping)
+            predictions = request_511_json(api_key, agency, station_code, mapping)
 
         for route, times in predictions.items():
             if times:
@@ -181,7 +184,7 @@ def format_service_prediction(headline, agency, station_codes, mapping=None, leg
             "text": opening_text + "\n".join(service_predictions_text)}
 
 
-def predict():
+def predict(api_key=None):
     """
     Pulls bus prediction info for some preconfigured stops, routes, and providers.
         This function exists for convenience, and is just sugar over the format_service_prediction function.
@@ -193,6 +196,9 @@ def predict():
         >>> predict()
         ['fmt': 'abcde', 'text': 'defgh']
     """
+    if not api_key:
+        api_key = DEFAULT_NEXTGEN_TOKEN
+
     muni = {"name": "MUNI Arrivals", "agency": "sf-muni",
             "stops": OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB')])}
     caltrain = {"name": "Caltrain@22nd", "agency": "caltrain", "stops": OrderedDict([('70022', 'SB')])}
@@ -208,9 +214,9 @@ def predict():
         agency = line['agency']
         stops = line['stops']
         mapping = line['mapping'] if line.get('mapping') else {}
-        predictions.append(format_service_prediction(name, agency, stops, mapping))
+        predictions.append(format_service_prediction(headline=name, agency=agency, station_codes=stops, api_key=api_key, mapping=mapping))
 
     # Caltrain Hack
-    predictions.append(format_service_prediction(caltrain['name'], caltrain['agency'], caltrain['stops'], legacy=True))
+    predictions.append(format_service_prediction(caltrain['name'], caltrain['agency'], caltrain['stops'], api_key='', legacy=True))
 
     return predictions

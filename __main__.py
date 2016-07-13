@@ -5,16 +5,26 @@ I might have to rewrite it later. In the meanwhile, at least it works!
 >> You have to rewrite it? Sweet, I'll take that as consent to break everything.
 '''
 
-from time import sleep
-import subprocess
 from datetime import datetime
+from time import sleep
+
+import subprocess
+import argparse
+
 import api_511
+
+parser = argparse.ArgumentParser(description="Display transit info on Noiseboard")
+parser.add_argument('-k', help="Manually specify an API key")
+args = parser.parse_args()
+
+manual_api_key = args.k
+print(manual_api_key)
 
 try:
     while True:
         messages = []
 
-        for bus_line in api_511.predict():
+        for bus_line in api_511.predict(api_key=manual_api_key):
             messages.append(bus_line)
 
         date_string = datetime.now().strftime('%m/%e %R')
@@ -32,5 +42,5 @@ try:
         subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
         sleep(60)
 finally:
-    display_text = 'printf "<ID01><PA><SE>  Noiseboard is dead - check console :(  \r\n" > /dev/ttyS0'
+    display_text = 'printf "<ID01><PA><SE>  Noiseboard is dead <FI> check console :(  \r\n" > /dev/ttyS0'
     subprocess.call(display_text, shell=True)
