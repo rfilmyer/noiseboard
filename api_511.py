@@ -126,7 +126,7 @@ def format_route_times(route, bus_times, direction='', mapping=None):
     route_info_text = "{route}{dir}: {times}"
 
     minutes = ','.join([str(x) for x in bus_times if int(x) <= 120])  # Get rid of abnormal predictions.
-    direction_fmt = ' <CF>' + direction + ' ' if direction else ''
+    direction_fmt = ' <CF>' + direction + '' if direction else ''
     direction_text = ' (' + direction + ')' if direction else ''
     return {"fmt":  route_info_fmt.format( route=route, times=minutes, dir=direction_fmt),
             "text": route_info_text.format(route=route, times=minutes, dir=direction_text)}
