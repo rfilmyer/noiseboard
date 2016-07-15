@@ -220,3 +220,17 @@ def predict(api_key=None):
     predictions.append(format_service_prediction(caltrain['name'], caltrain['agency'], caltrain['stops'], api_key='', legacy=True))
 
     return predictions
+
+class TransitPredictor(object):
+    """
+    """
+    def __init__(self, agency, station_codes, api_key, headline=None, mapping={}):
+        self.agency = agency
+        self.station_codes = station_codes
+        self.api_key = api_key
+        self.headline = headline if headline else agency
+        self.mapping = mapping
+    
+    def refresh_predictions(self):
+        request_511_json()
+        
