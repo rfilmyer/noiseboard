@@ -1,11 +1,11 @@
 """
 The all-in-one module to make calls to the 511.org XML API.
 """
-from xml.etree import ElementTree
 from collections import OrderedDict
 from datetime import datetime
-import re
+from xml.etree import ElementTree
 
+import default_transit_services
 import requests
 
 XML_TOKEN = 'ebda4c89-0c5f-40d8-9ed8-e9deff999a49'
@@ -22,7 +22,7 @@ class TransitServiceError(Exception):
     pass
 
 
-def request_511_json(api_key, agency='sf-muni', stopcode='15553', mapping=None):
+def parse_511_json(base_dict, mapping=None):
     """
     Sends a request to the 511.org JSON/GTFS API with an agency name and station code and
     returns lines that serve the stop and their next predicted arrival times.
@@ -35,10 +35,34 @@ def request_511_json(api_key, agency='sf-muni', stopcode='15553', mapping=None):
         OrderedDict: Lines and ETAs for routes at the station. Exists as an OrderedDict for predictability's sake.
 
     Examples:
-        >>> request_511_json('sf-muni', '15731') # Montgomery Station Inbound
-        OrderedDict([('J', ['2', '11']), ('KT', ['5', '16']), ('L', ['4', '6']),
-             ('M', ['1', '9']), ('N', ['4', '10'])])
+        >>> parse_511_json('<uuid>', 'sf-muni', '14305') # Geary & Laguna Inbound
+        OrderedDict([('38', [datetime.datetime(2016, 7, 15, 4, 57, 34),
+                             datetime.datetime(2016, 7, 15, 5, 03, 19),
+                             datetime.datetime(2016, 7, 15, 5, 07, 42)]),
+                      ('38R', [datetime.datetime(2016, 7, 15, 5, 00, 22)])])
     """
+    # base_dict = request_511_json(api_key, agency, stopcode)
+    predictions = OrderedDict()
+
+    for journey in base_dict['ServiceDelivery']['StopMonitoringDelivery']['MonitoredStopVisit']:
+        route_number = journey['MonitoredVehicleJourney']['LineRef']
+        if mapping:
+            if mapping.get(route_number):
+                route_number = mapping.get(route_number)
+
+        arrival_time = journey['MonitoredVehicleJourney']['MonitoredCall']['AimedArrivalTime']
+        arrival_datetime = datetime.strptime(arrival_time, "%Y-%m-%dT%H:%M:%SZ")
+
+        if not predictions.get(route_number):
+            predictions[route_number] = []
+
+        if len(predictions.get(route_number)) < 3:
+            predictions[route_number].append(arrival_datetime)
+
+    return predictions
+
+
+def request_511_json(api_key, agency, stopcode):
     api_request = {'format': 'json', 'api_key': api_key,
                    'agency': agency, 'stopCode': stopcode}
 
@@ -52,26 +76,13 @@ def request_511_json(api_key, agency='sf-muni', stopcode='15553', mapping=None):
         else:
             raise TransitServiceError("HTTP Error {code}".format(code=response.status_code))
     base_dict = response.json()
+    return base_dict
 
-    predictions = OrderedDict()
 
-    for journey in base_dict['ServiceDelivery']['StopMonitoringDelivery']['MonitoredStopVisit']:
-        route_number = journey['MonitoredVehicleJourney']['LineRef']
-        if mapping:
-            if mapping.get(route_number):
-                route_number = mapping.get(route_number)
-
-        arrival_time = journey['MonitoredVehicleJourney']['MonitoredCall']['AimedArrivalTime']
-        arrival_datetime = datetime.strptime(arrival_time, "%Y-%m-%dT%H:%M:%SZ")
-        arrival_delta =  arrival_datetime - datetime.utcnow()
-
-        arrival_mins = int(arrival_delta.total_seconds()/60)
-        if not predictions.get(route_number):
-            predictions[route_number] = [arrival_mins]
-        elif len(predictions.get(route_number)) < 3:
-            predictions[route_number].append(arrival_mins)
-
-    return predictions
+def get_minutes_until_arrival(time):
+    delta = time - datetime.utcnow()
+    mins = int(delta.total_seconds() / 60)
+    return mins
 
 
 def request_511_xml(stopcode='15553'):
@@ -135,7 +146,7 @@ def format_route_times(route, bus_times, direction='', mapping=None):
             "text": route_info_text.format(route=route, times=minutes, dir=direction_text)}
 
 
-def format_service_prediction(headline, agency, station_codes, api_key, mapping=None, legacy=False):
+def format_service_prediction(route_predictions, headline):
     """
     Returns a formatted string combining prediction times for different stops and lines
         under a single banner for a provider.
@@ -150,7 +161,7 @@ def format_service_prediction(headline, agency, station_codes, api_key, mapping=
             Board-formatted string is in "fmt", Human-readable in "text"
 
     Examples:
-        >>> format_service_prediction("MUNI Arrivals", "sf-muni", {'15553': 'NB', '13338': 'WB'})
+        >>> api_to_strings("MUNI Arrivals", "sf-muni", {'15553': 'NB', '13338': 'WB'})
             {'text': 'MUNI Arrivals: 14 (NB): 2,16 33 (NB): 12,27 49 (NB): 12,23',
                 'fmt': '<CP>MUNI Arrivals<FI><SA><CM>33 <CF>WB <CB>3,18<FI><SA><CM>14 <CF>NB <CB>2,16<FI><CM>33'\
                        '<CF>NB <CB>12,27<FI><CM>49 <CF>NB <CB>12,23'}
@@ -164,15 +175,7 @@ def format_service_prediction(headline, agency, station_codes, api_key, mapping=
     service_predictions_text = []
 
     for station_code, direction in station_codes.items():
-        route_predictions = []
-        if legacy:
-            predictions = request_511_xml(station_code)
-        else:
-            predictions = request_511_json(api_key, agency, station_code, mapping)
-
-        for route, times in predictions.items():
-            if times:
-                route_predictions.append(format_route_times(route, times, direction, mapping))
+        #route_predictions = format_factored_out_from_a_t_s(direction, api_key, station_code, mapping, legacy)
 
         route_predictions_fmt = '<FI>'.join([route['fmt'] for route in route_predictions])
         route_predictions_text = '\n'.join([route['text'] for route in route_predictions])
@@ -184,7 +187,32 @@ def format_service_prediction(headline, agency, station_codes, api_key, mapping=
             "text": opening_text + "\n".join(service_predictions_text)}
 
 
-def predict(api_key=None):
+def format_factored_out_from_a_t_s(predictions, direction, mapping):
+    route_predictions = []
+    for route, times in predictions.items():
+        if times:
+            route_predictions.append(format_route_times(route, times, direction, mapping))
+    return route_predictions
+
+
+def predict_factored_out_from_a_t_s(api_key, agency, station_code, mapping, legacy=False):
+    if legacy:
+        predictions = request_511_xml(station_code)
+    else:
+        predictions = parse_511_json(api_key, agency, station_code, mapping)
+    return predictions
+
+
+def api_to_strings(api_key, agency, station_codes, mapping, legacy, headline):
+    for station_code, direction in station_codes.items():
+        predictions = predict_factored_out_from_a_t_s(api_key, agency, station_code, mapping, legacy)
+        route_predictions = format_factored_out_from_a_t_s(predictions, direction, mapping)
+        formatted_prediction = format_service_prediction(route_predictions, headline, station_code)
+    return
+
+
+
+def predict_from_direct_call(api_key=None):
     """
     Pulls bus prediction info for some preconfigured stops, routes, and providers.
         This function exists for convenience, and is just sugar over the format_service_prediction function.
@@ -193,44 +221,64 @@ def predict(api_key=None):
         list: Dicts containing formatted and human-readable route information for given providers and service times.
 
     Examples:
-        >>> predict()
+        >>> predict_from_direct_call()
         ['fmt': 'abcde', 'text': 'defgh']
     """
     if not api_key:
-        api_key = DEFAULT_NEXTGEN_TOKEN
+        api_key = XML_TOKEN
 
-    muni = {"name": "MUNI Arrivals", "agency": "sf-muni",
-            "stops": OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB')])}
-    caltrain = {"name": "Caltrain@22nd", "agency": "caltrain", "stops": OrderedDict([('70022', 'SB')])}
-    bart = {"name": "BART", "agency": "bart", "stops": OrderedDict([('10', ''),('99', '')]),
-            "mapping": {"1561": "SFO/M", "385": "Daly", "389": "Daly", "720": "SFO",
-                        "1230": "Pitt", "237": "Rich", "736": "Frmt", "920": "Dubl",
-                        "764": "Mbrae", "243": "Daly", "722": "SFO", "917": "Frmt", "1351": "Rich"}}
-    services = [bart, muni]
-
+    # services = [default_transit_services.bart, default_transit_services.muni]
+    #
     predictions = []
-    for line in services:
-        name = line['name']
-        agency = line['agency']
-        stops = line['stops']
-        mapping = line['mapping'] if line.get('mapping') else {}
-        predictions.append(format_service_prediction(headline=name, agency=agency, station_codes=stops, api_key=api_key, mapping=mapping))
+    # for line in services:
+    #     name = line['name']
+    #     agency = line['agency']
+    #     stops = line['stops']
+    #     mapping = line['mapping'] if line.get('mapping') else {}
+    #     predictions.append(api_to_strings(headline=name, agency=agency, station_codes=stops, api_key=api_key, mapping=mapping))
 
     # Caltrain Hack
-    predictions.append(format_service_prediction(caltrain['name'], caltrain['agency'], caltrain['stops'], api_key='', legacy=True))
+    caltrain = default_transit_services.caltrain
+    predictions.append(api_to_strings(caltrain['name'], caltrain['agency'], caltrain['stops'], api_key=XML_TOKEN, legacy=True))
 
     return predictions
+
 
 class TransitPredictor(object):
     """
     """
-    def __init__(self, agency, station_codes, api_key, headline=None, mapping={}):
+    def __init__(self, agency, station_codes, api_key, headline=None, mapping=None):
         self.agency = agency
         self.station_codes = station_codes
         self.api_key = api_key
         self.headline = headline if headline else agency
-        self.mapping = mapping
+        self.mapping = mapping if mapping else {}
+        self.prediction_times = {} # OrderedDict of OrderedDicts
+        self.prediction_etas = {} # OrderedDict of OrderedDicts
     
     def refresh_predictions(self):
-        request_511_json()
-        
+        predictions = OrderedDict()
+        for station_code, direction in self.station_codes.items():
+            raw_prediction = request_511_json(self.api_key, self.agency, station_code)
+            predictions[station_code] = parse_511_json(raw_prediction, self.mapping)
+        self.prediction_times = predictions
+
+    def get_times_from_predictions(self):
+        prediction_etas = OrderedDict()
+        for station_code, lines_times in self.prediction_times.items():
+            stop_etas = OrderedDict()
+            for line, times in lines_times.items():
+                stop_etas[line] = [get_minutes_until_arrival(time) for time in times]
+            prediction_etas[station_code] = stop_etas
+        self.prediction_etas = prediction_etas
+
+    def get_prediction_strings(self):
+        prediction_strings = []
+        for station_code, route_predictions in self.prediction_etas.items():
+            # OrderedDict of routes/times
+            for route, arrivals in route_predictions.items():
+                direction = self.station_codes[station_code]
+                prediction_strings.append(format_route_times(route, arrivals, direction, self.mapping))
+        return prediction_strings
+
+

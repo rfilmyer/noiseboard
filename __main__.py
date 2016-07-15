@@ -11,6 +11,8 @@ from time import sleep
 import subprocess
 import argparse
 
+import default_transit_services
+from api_511 import TransitPredictor
 import api_511
 
 parser = argparse.ArgumentParser(description="Display transit info on Noiseboard")
@@ -20,12 +22,28 @@ args = parser.parse_args()
 manual_api_key = args.k
 print(manual_api_key)
 
+
+def get_default_predictors(api_key=None):
+    transit_predictors = []
+    default_services = [default_transit_services.bart, default_transit_services.muni]
+    for service in default_services:
+        transit_predictors.append(
+            TransitPredictor(service.get('agency'), service.get('stops'), api_key, service.get('name'), service.get('mapping')))
+    return transit_predictors
+
+manual_api_key = '115b93e5-c32a-4fd7-a836-f9b90b89e9ff' # TODO knock this testing token out
+
+api_key = manual_api_key if manual_api_key else api_511.DEFAULT_NEXTGEN_TOKEN
+predictors = get_default_predictors(api_key)
+
 try:
     while True:
         messages = []
 
-        for bus_line in api_511.predict(api_key=manual_api_key):
-            messages.append(bus_line)
+        for service in predictors:
+            service.refresh_predictions()
+            service.get_times_from_predictions()
+            messages.append(service.get_prediction_strings())
 
         date_string = datetime.now().strftime('%m/%e %R')
         messages.append({'fmt': date_string, 'text': date_string})
