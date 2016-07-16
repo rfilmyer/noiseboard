@@ -48,8 +48,7 @@ def parse_511_json(parsed_response, mapping=None):
         if not predictions.get(route_number):
             predictions[route_number] = []
 
-        if len(predictions.get(route_number)) < 3:
-            predictions[route_number].append(arrival_datetime)
+        predictions[route_number].append(arrival_datetime)
 
     return predictions
 
@@ -293,7 +292,7 @@ class TransitPredictor(object):
                 etas = []
                 for time in times:
                     eta = get_minutes_until_arrival(time)
-                    if eta >= 0:
+                    if eta >= 0 and len(etas) <= 2:
                         etas.append(eta)
                 stop_etas[line] = etas
             prediction_etas[station_code] = stop_etas
