@@ -20,8 +20,6 @@ parser.add_argument('-k', help="Manually specify an API key")
 args = parser.parse_args()
 
 manual_api_key = args.k
-print(manual_api_key)
-
 
 def get_default_predictors(api_key=None):
     transit_predictors = []
@@ -34,16 +32,19 @@ def get_default_predictors(api_key=None):
 manual_api_key = '115b93e5-c32a-4fd7-a836-f9b90b89e9ff' # TODO knock this testing token out
 
 api_key = manual_api_key if manual_api_key else api_511.DEFAULT_NEXTGEN_TOKEN
-predictors = get_default_predictors(api_key)
+# predictors = get_default_predictors(api_key)
 
 try:
     while True:
         messages = []
 
-        for service in predictors:
-            service.refresh_predictions()
-            service.get_times_from_predictions()
-            messages.append(service.get_prediction_strings())
+        # for service in predictors:
+        #     service.refresh_predictions()
+        #     service.get_times_from_predictions()
+        #     messages.append(service.get_prediction_strings())
+
+        for service in api_511.predict_from_direct_call():
+            messages.append(service)
 
         date_string = datetime.now().strftime('%m/%e %R')
         messages.append({'fmt': date_string, 'text': date_string})
