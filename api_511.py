@@ -28,7 +28,9 @@ def parse_511_json(parsed_response, mapping=None):
 
     Args:
         parsed_response (dict): The dict from the parsed JSON of the 511 API response.
-        mapping (dict):
+        mapping (dict): A dict that is used to convert route designations
+            (for example, BART line 1561 is a SFO/Millbrae train, so an entry {"1561": "SFO/M"}
+            is useful to convert these internal numbers into something more readable)
     Returns:
         OrderedDict: Lines and ETAs for routes at the station. Exists as an OrderedDict for consistent order.
     """
@@ -36,7 +38,7 @@ def parse_511_json(parsed_response, mapping=None):
 
     for journey in parsed_response['ServiceDelivery']['StopMonitoringDelivery']['MonitoredStopVisit']:
         route_number = journey['MonitoredVehicleJourney']['LineRef']
-        if mapping:
+        if mapping:  # TODO find out why this is used twice
             if mapping.get(route_number):
                 route_number = mapping.get(route_number)
 
@@ -156,7 +158,7 @@ def format_route_times(route, bus_times, direction='', mapping=None):
         >>> format_route_times('14', [3, 11, 17], 'NB')
         {'fmt': '<CM>14 <CF>NB <CB>3,11,17', 'text': '14 (NB): 3,11,17'}
     """
-    if mapping:
+    if mapping:  # TODO find out why this is used twice
         if mapping.get(route):
             route = mapping.get(route)
     route_info_fmt = "<CM>{route}{dir} <CB>{times}"
@@ -272,7 +274,7 @@ def predict_from_direct_call(api_key=None):
     # Caltrain Hack
     caltrain = default_transit_services.caltrain
     caltrain['stops'] = OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB')])
-    predictions.append(api_to_strings(caltrain['name'], caltrain['stops'], api_key=XML_TOKEN, legacy=True))
+    predictions.append(api_to_strings(caltrain['name'], caltrain['stops'], api_key, legacy=True))
 
     return predictions
 
@@ -318,5 +320,4 @@ class TransitPredictor(object):
                 direction = self.station_codes[station_code]
                 prediction_strings.append(format_route_times(route, arrivals, direction, self.mapping))
         return prediction_strings
-
 
