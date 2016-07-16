@@ -5,11 +5,10 @@ from collections import OrderedDict
 from datetime import datetime
 from xml.etree import ElementTree
 
-import default_transit_services
 import requests
 
 XML_TOKEN = 'ebda4c89-0c5f-40d8-9ed8-e9deff999a49'
-XML_URL = 'http://services.my511.org/Transit2.0/GetNextDeparturesByStopCode.aspx'\
+XML_URL = 'http://services.my511.org/Transit2.0/GetNextDeparturesByStopCode.aspx'
 
 DEFAULT_NEXTGEN_TOKEN = '61c0dc9d-b356-4a4f-9190-3cc687c24397'
 NEXTGEN_URL = 'http://api.511.org/transit/StopMonitoring'
@@ -31,6 +30,7 @@ def parse_511_json(parsed_response, mapping=None):
         mapping (dict): A dict that is used to convert route designations
             (for example, BART line 1561 is a SFO/Millbrae train, so an entry {"1561": "SFO/M"}
             is useful to convert these internal numbers into something more readable)
+            It is not strictly necessary to use the mapping here, but it is much better for your sanity.
     Returns:
         OrderedDict: Lines and ETAs for routes at the station. Exists as an OrderedDict for consistent order.
     """
@@ -38,7 +38,7 @@ def parse_511_json(parsed_response, mapping=None):
 
     for journey in parsed_response['ServiceDelivery']['StopMonitoringDelivery']['MonitoredStopVisit']:
         route_number = journey['MonitoredVehicleJourney']['LineRef']
-        if mapping:  # TODO find out why this is used twice
+        if mapping:
             if mapping.get(route_number):
                 route_number = mapping.get(route_number)
 
@@ -113,12 +113,12 @@ def request_511_xml(stopcode='15553'):
     returns a dict of lines that serve it and the next predicted arrival times.
 
     Args:
-        stopcode: The code uniquely identifying a MUNI stop, usually visible on a nearby sign post.
+        stopcode (str or int): The code uniquely identifying a MUNI stop, usually visible on a nearby sign post.
     Returns:
         OrderedDict: Lines and ETAs for routes at the station. Exists as an OrderedDict for predictability's sake.
 
     Examples:
-        >>>request_511_xml('15731') # Montgomery Station Inbound
+        >>> request_511_xml('15731')  # Montgomery Station Inbound
         OrderedDict([('J', ['2', '11']), ('KT', ['5', '16']), ('L', ['4', '6']),
              ('M', ['1', '9']), ('N', ['4', '10'])])
     """
@@ -157,8 +157,9 @@ def format_route_times(route, bus_times, direction='', mapping=None):
     Examples:
         >>> format_route_times('14', [3, 11, 17], 'NB')
         {'fmt': '<CM>14 <CF>NB <CB>3,11,17', 'text': '14 (NB): 3,11,17'}
+
     """
-    if mapping:  # TODO find out why this is used twice
+    if mapping:
         if mapping.get(route):
             route = mapping.get(route)
     route_info_fmt = "<CM>{route}{dir} <CB>{times}"
@@ -167,7 +168,7 @@ def format_route_times(route, bus_times, direction='', mapping=None):
     minutes = ','.join([str(x) for x in bus_times if int(x) <= 120])  # Get rid of abnormal predictions.
     direction_fmt = ' <CF>' + direction + '' if direction else ''
     direction_text = ' (' + direction + ')' if direction else ''
-    return {"fmt":  route_info_fmt.format(route=route, times=minutes, dir=direction_fmt),
+    return {"fmt": route_info_fmt.format(route=route, times=minutes, dir=direction_fmt),
             "text": route_info_text.format(route=route, times=minutes, dir=direction_text)}
 
 
@@ -254,34 +255,10 @@ def api_to_strings(headline, station_codes, api_key=None, agency=None, mapping=N
     return formatted_predictions
 
 
-def predict_from_direct_call(api_key=None):
-    """
-    Pulls bus prediction info for some pre-configured stops, routes, and providers.
-        This function exists for convenience, and is just sugar over the format_service_prediction function.
-
-    Returns:
-        list: Dicts containing formatted and human-readable route information for given providers and service times.
-
-    Examples:
-        >>> predict_from_direct_call()
-        ['fmt': 'abcde', 'text': 'defgh']
-    """
-    if not api_key:
-        api_key = XML_TOKEN
-
-    predictions = []
-
-    # Caltrain Hack
-    caltrain = default_transit_services.caltrain
-    caltrain['stops'] = OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB')])
-    predictions.append(api_to_strings(caltrain['name'], caltrain['stops'], api_key, legacy=True))
-
-    return predictions
-
-
 class TransitPredictor(object):
     """
     """
+
     def __init__(self, agency, station_codes, api_key, headline=None, mapping=None):
         self.agency = agency
         self.station_codes = station_codes
@@ -290,8 +267,15 @@ class TransitPredictor(object):
         self.mapping = mapping if mapping else {}
         self.prediction_times = {}  # OrderedDict of OrderedDicts
         self.prediction_etas = {}  # OrderedDict of OrderedDicts
-    
+
     def refresh_predictions(self, session=None):
+        """
+        Get new expected arrival times from the 511 API, which can then be used to make new predictions.
+
+        Args:
+            session (requests.Session): If you are making multiple requests, it may be worth it to use a
+                requests.Session object. See the requests library documentation for details.
+        """
         predictions = OrderedDict()
         for station_code, direction in self.station_codes.items():
             raw_prediction = request_511_json(self.api_key, self.agency, station_code, session)
@@ -299,6 +283,9 @@ class TransitPredictor(object):
         self.prediction_times = predictions
 
     def get_times_from_predictions(self):
+        """
+        Generates ETAs from expected arrival times.
+        """
         prediction_etas = OrderedDict()
         for station_code, lines_times in self.prediction_times.items():
             stop_etas = OrderedDict()
@@ -306,18 +293,24 @@ class TransitPredictor(object):
                 etas = []
                 for time in times:
                     eta = get_minutes_until_arrival(time)
-                    if eta <= 0:
+                    if eta >= 0:
                         etas.append(eta)
                 stop_etas[line] = etas
             prediction_etas[station_code] = stop_etas
         self.prediction_etas = prediction_etas
 
     def get_prediction_strings(self):
+        """
+        Generates formatted prediction strings
+
+        Returns:
+            dict: Prolite-friendly and human-readable predictions.
+                Has 2 keys: "fmt" for Prolite strings, and "text" for human-readable strings.
+
+        """
         prediction_strings = []
         for station_code, route_predictions in self.prediction_etas.items():
-            # OrderedDict of routes/times
             for route, arrivals in route_predictions.items():
                 direction = self.station_codes[station_code]
                 prediction_strings.append(format_route_times(route, arrivals, direction, self.mapping))
-        return prediction_strings
-
+        return format_service_prediction(prediction_strings, self.headline)
