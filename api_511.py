@@ -292,7 +292,7 @@ class TransitPredictor(object):
                 etas = []
                 for time in times:
                     eta = get_minutes_until_arrival(time)
-                    if eta >= 0 and len(etas) <= 2:
+                    if eta >= 0 and len(etas) < 2:
                         etas.append(eta)
                 stop_etas[line] = etas
             prediction_etas[station_code] = stop_etas
