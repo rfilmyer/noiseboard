@@ -53,7 +53,7 @@ predictors = get_default_predictors(current_api_key)
 refresh_time_in_minutes = 6  # Refresh API predictions every X minutes.
 # This should be equal to the number of stops you have.
 
-with serial.Serial(serial_port, 300, '8N1') as prolite:
+with serial.Serial(serial_port, 300) as prolite:
     while True:
         with requests.Session() as session:
             for minutes_in_loop in range(refresh_time_in_minutes):
