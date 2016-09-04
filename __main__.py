@@ -8,7 +8,7 @@ I might have to rewrite it later. In the meanwhile, at least it works!
 from datetime import datetime
 from time import sleep
 
-import subprocess
+#import subprocess
 import argparse
 
 import requests
@@ -17,11 +17,15 @@ import default_transit_services
 from api_511 import TransitPredictor
 import api_511
 
+import serial
+
 parser = argparse.ArgumentParser(description="Display transit info on Noiseboard")
 parser.add_argument('-k', help="Manually specify an API key")
+parser.add_argument('-p', type=str, help="Send data to Prolite board on a given serial port")
 args = parser.parse_args()
 
 manual_api_key = args.k
+serial_port = args.p
 
 
 def get_default_predictors(api_key=None):
@@ -49,7 +53,7 @@ predictors = get_default_predictors(current_api_key)
 refresh_time_in_minutes = 6  # Refresh API predictions every X minutes.
 # This should be equal to the number of stops you have.
 
-try:
+with serial.Serial(serial_port, 300, '8N1') as prolite:
     while True:
         with requests.Session() as session:
             for minutes_in_loop in range(refresh_time_in_minutes):
@@ -73,8 +77,6 @@ try:
                 print(single_string_text)
 
                 display_text = "<ID01><PA>  <FD>{}\r\n".format(single_string_fmt)
-                subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
+                #subprocess.call('printf "{text}" > /dev/ttyS0'.format(text=display_text), shell=True)
+                prolite.write(display_text)
                 sleep(60)
-finally:
-    display_text = 'printf "<ID01><PA><SE>  Noiseboard is dead <FI> check console :(  \r\n" > /dev/ttyS0'
-    subprocess.call(display_text, shell=True)
