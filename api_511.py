@@ -20,6 +20,12 @@ class TransitServiceError(Exception):
     """
     pass
 
+class APIUnauthorizedError(TransitServiceError):
+    pass
+
+class APIRateLimitError(TransitServiceError):
+    pass
+
 
 def parse_511_json(parsed_response, mapping=None):
     """
@@ -79,9 +85,9 @@ def request_511_json(api_key, agency, stopcode, session=None):
         response = requests.get(NEXTGEN_URL, params=api_request)
     if response.status_code != 200:
         if response.status_code == 429:
-            raise TransitServiceError("Rate Limited/HTTP Error 429:" + "\n" + response.text)
+            raise APIRateLimitError("Rate Limited/HTTP Error 429:" + "\n" + response.text)
         elif response.status_code == 401:
-            raise TransitServiceError("Unauthorized/HTTP Error 401:" + "\n" + response.text)
+            raise APIUnauthorizedError("Unauthorized/HTTP Error 401:" + "\n" + response.text)
         else:
             raise TransitServiceError("HTTP Error {code}".format(code=response.status_code))
 
@@ -90,18 +96,24 @@ def request_511_json(api_key, agency, stopcode, session=None):
     return base_dict
 
 
-def get_minutes_until_arrival(time):
+def get_minutes_until_arrival(time, until=datetime.utcnow()):
     """
-    Returns the number of minutes between a specified time (in UTC) and now.
+    Returns the number of minutes between one specified time (in UTC) and another (Right now, by default).
 
     Args:
-        time (datetime.datetime): A given time, in UTC.
+        time (datetime.datetime): A given time, in UTC. Usually corresponds to an ETA for a bus.
+        until (datetime.datetime): Another given time, also in UTC. This is what the first time will be compared to.
 
     Returns:
         int: How many minutes until the given time.
 
+    Examples:
+        >>> now = datetime(2016,1,1,0,0,0)
+        >>> arrival = datetime(2016,1,1,0,5,0)
+        >>> get_minutes_until_arrival(arrival, now)
+        5
     """
-    delta = time - datetime.utcnow()
+    delta = time - until
     mins = int(delta.total_seconds() / 60)
     return mins
 
@@ -256,6 +268,22 @@ def api_to_strings(headline, station_codes, api_key=None, agency=None, mapping=N
 
 class TransitPredictor(object):
     """
+    Stores predictions for different transit services.
+
+    Attributes:
+        agency (str): A transit agency code recognizable by the 511.gov API.
+        station_codes (dict): A dictionary where keys correspond to station ID numbers,
+            and values correspond to human-readable directions. Values must be strings, but can be empty.
+            Ex: {99:"NB", 10:""}
+        api_key (str): An API key used to query the 511.gov API. This will most likely be a UUID.
+        headline (str): Human-readable "Headline" that displays before lines and predictions.
+            Ex: "Caltrain @ 22nd", "BART Times"
+        mapping (dict): If route numbers from the API are mainly used internally (eg. Bart),
+            pass a dict where keys are the route numbers and values are their descriptions.
+            Useful when "PITTSBURG-BAY POINT" won't fit on your display board.
+        prediction_times (dict): A dict of dicts, where the outermost dict holds stations,
+            which in turn hold timestamps (keys) with a list of arrival times (values)
+        prediction_etas (dict): Same as above, but with the number of minutes until estimated arrival time.
     """
 
     def __init__(self, agency, station_codes, api_key, headline=None, mapping=None):
@@ -274,6 +302,9 @@ class TransitPredictor(object):
         Args:
             session (requests.Session): If you are making multiple requests, it may be worth it to use a
                 requests.Session object. See the requests library documentation for details.
+
+        Returns:
+            none
         """
         predictions = OrderedDict()
         for station_code, direction in self.station_codes.items():
@@ -300,7 +331,7 @@ class TransitPredictor(object):
 
     def get_prediction_strings(self):
         """
-        Generates formatted prediction strings
+        Generates formatted prediction strings.
 
         Returns:
             dict: Prolite-friendly and human-readable predictions.
