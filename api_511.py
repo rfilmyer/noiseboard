@@ -20,8 +20,10 @@ class TransitServiceError(Exception):
     """
     pass
 
+
 class APIUnauthorizedError(TransitServiceError):
     pass
+
 
 class APIRateLimitError(TransitServiceError):
     pass
