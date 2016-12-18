@@ -1,12 +1,12 @@
 from unittest import TestCase
 import json
+import datetime
 import api_511
 from collections import OrderedDict
 
 
 class TestJSONParse(TestCase):
     def setUp(self):
-        import datetime
         self.now = datetime.datetime(2016, 7, 15, 14, 22)
         self.now_string = "2016-07-15T14:22Z"
     def test_BART_normal(self):
@@ -31,6 +31,9 @@ class TestJSONParse(TestCase):
                                                     datetime.datetime(2016, 7, 15, 15, 22)])])
             self.assertEqual(arrivals, expected_result)
 
+    def test_bart_with_mapping(self):
+        pass
+
     def test_caltrain_blank(self):
         with open("sample_blank_response.json", "r") as response_file:
             import json
@@ -39,5 +42,18 @@ class TestJSONParse(TestCase):
             self.assertEqual(arrivals, OrderedDict())
 
 
+class TestMinutesUntilArrival(TestCase):
+    def test_5_minutes(self):
+        now = datetime.datetime(2016,1,1,0,0,0)
+        arrival = datetime.datetime(2016,1,1,0,5,0)
+        self.assertEqual(api_511.get_minutes_until_arrival(arrival, now), 5)
 
-TestJSONParse()
+    def test_90_seconds(self):
+        now = datetime.datetime(2016, 1, 1, 0, 0, 0)
+        arrival = datetime.datetime(2016, 1, 1, 0, 1, 30)
+        self.assertEqual(api_511.get_minutes_until_arrival(arrival, now), 1)
+
+class TestFormatRouteTimes(TestCase):
+    def test_like_doctest(self):
+        self.assertEqual(api_511.format_route_times('14', [3, 11, 17], 'NB'),
+                         {'fmt': '<CM>14 <CF>NB <CB>3,11,17', 'text': '14 (NB): 3,11,17'})

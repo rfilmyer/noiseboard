@@ -43,8 +43,9 @@ def parse_511_json(parsed_response, mapping=None):
         OrderedDict: Lines and ETAs for routes at the station. Exists as an OrderedDict for consistent order.
     """
     predictions = OrderedDict()
+    monitored_stop = parsed_response['ServiceDelivery']['StopMonitoringDelivery']['MonitoredStopVisit']
 
-    for journey in parsed_response['ServiceDelivery']['StopMonitoringDelivery']['MonitoredStopVisit']:
+    for journey in monitored_stop:
         route_number = journey['MonitoredVehicleJourney']['LineRef']
         if mapping:
             if mapping.get(route_number):
