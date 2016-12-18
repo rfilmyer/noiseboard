@@ -51,7 +51,7 @@ current_api_key = manual_api_key if manual_api_key else api_511.DEFAULT_NEXTGEN_
 predictors = get_default_predictors(current_api_key)
 
 refresh_time_in_minutes = 6  # Refresh API predictions every X minutes.
-# This should be equal to the number of stops you have.
+# This should be equal to the number of stops you have. The current API rate limits to 60 requests per hour.
 
 with serial.Serial(serial_port, 300) as prolite:
     while True:
