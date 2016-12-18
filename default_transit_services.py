@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 muni = {"name": "MUNI Arrivals", "agency": "sf-muni",
-        "stops": OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB')])}
+        "stops": OrderedDict([('15553', 'NB'), ('13338', 'WB'), ('15554', 'SB'), ('13291', 'WB')])}
 caltrain = {"name": "Caltrain@22nd", "agency": "caltrain", "stops": OrderedDict([('70022', 'SB')])}
 bart = {"name": "BART", "agency": "bart", "stops": OrderedDict([('10', ''), ('99', '')]),
         "mapping": {"1561": "SFO/M", "385": "Daly", "389": "Daly", "720": "SFO",
